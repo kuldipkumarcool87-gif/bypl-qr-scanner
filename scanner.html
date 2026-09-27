@@ -1,230 +1,555 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 
   <title>BYPL QR Scanner</title>
 
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script
+    src="https://unpkg.com/html5-qrcode"
+    type="text/javascript">
+  </script>
 
   <style>
-    * {
-      box-sizing: border-box;
+
+    *{
+      box-sizing:border-box;
     }
 
-    body {
-      margin: 0;
-      padding: 20px;
-      font-family: Arial, sans-serif;
-      background: #f4f7fb;
-      color: #222;
+    body{
+      margin:0;
+      padding:15px;
+      background:#0f172a;
+      color:#fff;
+      font-family:Arial,Helvetica,sans-serif;
+      min-height:100vh;
     }
 
-    .container {
-      max-width: 520px;
-      margin: 0 auto;
-      background: #ffffff;
-      padding: 20px;
-      border-radius: 18px;
-      box-shadow: 0 8px 30px rgba(0,0,0,0.10);
+    .container{
+      max-width:500px;
+      margin:auto;
+      background:#1e293b;
+      border-radius:18px;
+      padding:18px;
+      box-shadow:0 15px 40px rgba(0,0,0,.35);
     }
 
-    h2 {
-      margin-top: 0;
-      text-align: center;
+    h2{
+      text-align:center;
+      margin:5px 0 18px;
     }
 
-    #reader {
-      width: 100%;
-      margin-top: 15px;
+    #reader{
+      width:100%;
+      background:#000;
+      border-radius:12px;
+      overflow:hidden;
+      min-height:300px;
     }
 
-    .status {
-      margin-top: 15px;
-      padding: 12px;
-      background: #eef3f8;
-      border-radius: 10px;
-      text-align: center;
-      font-size: 14px;
+    .status{
+      margin-top:15px;
+      padding:12px;
+      border-radius:10px;
+      background:#334155;
+      text-align:center;
+      font-size:14px;
+      line-height:1.5;
     }
 
-    .btn {
-      width: 100%;
-      padding: 13px;
-      margin-top: 12px;
-      border: none;
-      border-radius: 10px;
-      font-size: 16px;
-      cursor: pointer;
-      background: #1565c0;
-      color: white;
+    .btn{
+      width:100%;
+      margin-top:15px;
+      padding:13px;
+      border:0;
+      border-radius:10px;
+      font-weight:800;
+      cursor:pointer;
+      font-size:15px;
     }
 
-    .btn:hover {
-      background: #0d47a1;
+    .close{
+      background:#dc2626;
+      color:#fff;
     }
+
+    .return{
+      background:#2563eb;
+      color:#fff;
+    }
+
   </style>
+
 </head>
+
 
 <body>
 
 <div class="container">
 
-  <h2>📷 BYPL QR Scanner</h2>
+  <h2>
+    📷 BYPL QR Scanner
+  </h2>
 
   <div id="reader"></div>
 
-  <div id="status" class="status">
+  <div
+    id="status"
+    class="status">
+
     Camera starting...
+
   </div>
 
-  <button class="btn" onclick="closeScanner()">
-    Close Scanner
+
+  <button
+    id="returnBtn"
+    class="btn return"
+    style="display:none;"
+    onclick="returnToInspection()">
+
+    ← Return to Inspection
+
+  </button>
+
+
+  <button
+    class="btn close"
+    onclick="closeScanner()">
+
+    ✕ Close Scanner
+
   </button>
 
 </div>
 
+
 <script>
 
-  const params = new URLSearchParams(window.location.search);
-
-  const targetOrigin = params.get('origin') || '*';
-
-  let qrScanner = null;
-  let scanCompleted = false;
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
 
 
-  function updateStatus(message) {
-    document.getElementById('status').textContent = message;
+  /*
+   * Apps Script parent origin.
+   */
+
+  const targetOrigin =
+    params.get('origin') ||
+    '*';
+
+
+  let qrScanner =
+    null;
+
+
+  let scanCompleted =
+    false;
+
+
+  function updateStatus(
+    message
+  ){
+
+    const status =
+      document.getElementById(
+        'status'
+      );
+
+
+    if(status){
+
+      status.textContent =
+        message;
+
+    }
+
   }
 
 
-  function sendQRToParent(qrValue) {
+  function sendQRToParent(
+    qrValue
+  ){
 
-    if (scanCompleted) return;
+    if(scanCompleted){
+      return;
+    }
 
-    scanCompleted = true;
 
-    updateStatus('QR scanned successfully. Sending data...');
+    scanCompleted =
+      true;
 
-    if (window.opener && !window.opener.closed) {
 
-      window.opener.postMessage(
-        {
-          type: 'BYPL_QR_SCANNED',
-          qr: qrValue
+    updateStatus(
+      '✓ QR scanned successfully. Sending data...'
+    );
+
+
+    if(
+      window.opener &&
+      !window.opener.closed
+    ){
+
+      try{
+
+        window.opener.postMessage(
+          {
+            type:'BYPL_QR_SCANNED',
+            qr:String(qrValue)
+          },
+          targetOrigin
+        );
+
+      }catch(error){
+
+        console.error(
+          error
+        );
+
+      }
+
+
+      /*
+       * Give parent time to receive message.
+       */
+
+      setTimeout(
+        function(){
+
+          try{
+
+            window.close();
+
+          }catch(e){}
+
+
+          /*
+           * If browser refuses window.close(),
+           * show return button.
+           */
+
+          setTimeout(
+            function(){
+
+              document
+                .getElementById(
+                  'returnBtn'
+                )
+                .style.display =
+                'block';
+
+              updateStatus(
+                'QR sent successfully. You can return to the inspection screen.'
+              );
+
+            },
+            500
+          );
+
         },
-        targetOrigin
+        800
       );
 
-      setTimeout(function() {
-        window.close();
-      }, 500);
-
-    } else {
-
-      updateStatus('Main inspection window not found.');
-
-    }
-  }
-
-
-  function onScanSuccess(decodedText) {
-
-    if (!decodedText) return;
-
-    sendQRToParent(String(decodedText));
-
-    if (qrScanner) {
-
-      qrScanner.stop()
-        .then(function() {
-          console.log('Scanner stopped');
-        })
-        .catch(function(error) {
-          console.log('Scanner stop error:', error);
-        });
-
-    }
-  }
-
-
-  function onScanFailure(error) {
-    // Ignore continuous scanning errors.
-  }
-
-
-  function startScanner() {
-
-    updateStatus('Camera permission मांग रहा है...');
-
-    qrScanner = new Html5Qrcode("reader");
-
-    qrScanner.start(
-
-      {
-        facingMode: {
-          ideal: "environment"
-        }
-      },
-
-      {
-        fps: 10,
-        qrbox: {
-          width: 250,
-          height: 250
-        }
-      },
-
-      onScanSuccess,
-      onScanFailure
-
-    )
-    .then(function() {
+    }else{
 
       updateStatus(
-        'QR code को camera के सामने रखें...'
+        'Main inspection window not found. Please return to the inspection page manually.'
       );
 
-    })
-    .catch(function(error) {
 
-      console.error(error);
+      document
+        .getElementById(
+          'returnBtn'
+        )
+        .style.display =
+        'block';
 
-      updateStatus(
-        'Camera start नहीं हो पाया। Camera permission allow करें और page को HTTPS पर खोलें।'
-      );
-
-    });
+    }
 
   }
 
 
-  function closeScanner() {
+  function onScanSuccess(
+    decodedText
+  ){
 
-    if (qrScanner) {
+    if(!decodedText){
+      return;
+    }
 
-      qrScanner.stop()
-        .catch(function() {})
-        .finally(function() {
-          window.close();
-        });
 
-    } else {
+    sendQRToParent(
+      String(decodedText)
+    );
+
+
+    if(qrScanner){
+
+      qrScanner
+        .stop()
+        .then(
+          function(){
+
+            try{
+
+              qrScanner.clear();
+
+            }catch(e){}
+
+          }
+        )
+        .catch(
+          function(error){
+
+            console.log(
+              'Scanner stop:',
+              error
+            );
+
+          }
+        );
+
+    }
+
+  }
+
+
+  function onScanFailure(
+    error
+  ){
+
+    /*
+     * Continuous scan failures are normal.
+     * Do not display them to user.
+     */
+
+  }
+
+
+  function startScanner(){
+
+    updateStatus(
+      'Requesting camera permission...'
+    );
+
+
+    if(
+      typeof Html5Qrcode ===
+      'undefined'
+    ){
+
+      updateStatus(
+        'QR scanner library could not be loaded. Check internet connection.'
+      );
+
+      return;
+
+    }
+
+
+    qrScanner =
+      new Html5Qrcode(
+        'reader'
+      );
+
+
+    qrScanner
+      .start(
+
+        {
+          facingMode:{
+            ideal:'environment'
+          }
+        },
+
+        {
+          fps:10,
+
+          qrbox:{
+            width:250,
+            height:250
+          },
+
+          aspectRatio:1.0
+
+        },
+
+        onScanSuccess,
+
+        onScanFailure
+
+      )
+
+      .then(
+        function(){
+
+          updateStatus(
+            '✓ Camera started. QR code को camera के सामने रखें.'
+          );
+
+        }
+      )
+
+      .catch(
+        function(error){
+
+          console.error(
+            'Camera error:',
+            error
+          );
+
+
+          updateStatus(
+            'Camera start नहीं हो पाया. Browser में Camera permission Allow करें और इस page को HTTPS पर खोलें.'
+          );
+
+
+          document
+            .getElementById(
+              'returnBtn'
+            )
+            .style.display =
+            'block';
+
+        }
+      );
+
+  }
+
+
+  function stopScanner(){
+
+    if(!qrScanner){
+      return Promise.resolve();
+    }
+
+
+    return qrScanner
+      .stop()
+      .catch(
+        function(){}
+      )
+      .then(
+        function(){
+
+          try{
+
+            qrScanner.clear();
+
+          }catch(e){}
+
+        }
+      );
+
+  }
+
+
+  function closeScanner(){
+
+    stopScanner()
+      .then(
+        function(){
+
+          /*
+           * First attempt to close popup.
+           */
+
+          try{
+
+            window.close();
+
+          }catch(e){}
+
+
+          /*
+           * Mobile browsers may refuse
+           * window.close().
+           *
+           * Therefore show fallback.
+           */
+
+          setTimeout(
+            function(){
+
+              document
+                .getElementById(
+                  'returnBtn'
+                )
+                .style.display =
+                'block';
+
+              updateStatus(
+                'Browser ने tab को automatically close नहीं किया. ऊपर/previous tab पर वापस जाएँ.'
+              );
+
+            },
+            500
+          );
+
+        }
+      );
+
+  }
+
+
+  function returnToInspection(){
+
+    /*
+     * If this page was opened as popup,
+     * try closing it.
+     */
+
+    try{
 
       window.close();
 
-    }
+    }catch(e){}
+
+
+    /*
+     * If close is blocked,
+     * go back if possible.
+     */
+
+    setTimeout(
+      function(){
+
+        if(
+          window.history.length >
+          1
+        ){
+
+          window.history.back();
+
+        }
+
+      },
+      300
+    );
 
   }
 
 
-  window.onload = function() {
-    startScanner();
-  };
+  window.addEventListener(
+    'load',
+    function(){
+
+      startScanner();
+
+    }
+  );
 
 </script>
 
 </body>
 </html>
+```
